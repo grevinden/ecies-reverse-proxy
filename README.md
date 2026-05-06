@@ -1,3 +1,4 @@
+```markdown
 # 🔐 ECIES Reverse Proxy
 
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
@@ -56,19 +57,27 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    A[Зашифрованный пакет] -->|Base64 URL-safe| B(Декодирование)
-    B --> C[32 байта: Ephemeral Public Key]
-    B --> D[12 байт: Nonce]
-    B --> E[Шифротекст + тег Poly1305]
-    C --> F{X25519 ECDH}
-    G[Ваш приватный ключ] --> F
-    F --> H[Общий секрет]
-    H --> I(HKDF-SHA256)
-    I --> J[Симметричный ключ]
-    J --> K(ChaCha20-Poly1305 Decrypt)
-    D --> K
-    E --> K
-    K --> L[Открытый текст]
+    PKG["Зашифрованный пакет в {{...}}"]
+    Priv[Приватный ключ]
+    
+    PKG --> Decode
+    Decode[Base64 URL-safe Decode] --> EphPub[Эфемерный публичный ключ: 32B]
+    Decode --> Nonce[Nonce: 12B]
+    Decode --> Cipher[Шифротекст + тег Poly1305]
+    
+    EphPub --> DH{X25519 ECDH}
+    Priv --> DH
+    DH --> Shared[Общий секрет]
+    
+    Shared --> HKDF[<b>HKDF-SHA256</b><br/>info=ecies-chacha20]
+    HKDF --> SymKey[Симметричный ключ: 32B]
+    
+    SymKey --> Decrypt{ChaCha20-Poly1305 Decrypt}
+    Nonce --> Decrypt
+    Cipher --> Decrypt
+    
+    Decrypt -->|Успех| Plain[Открытый текст]
+    Decrypt -->|Ошибка| Err[Пакет не тронут]
 ```
 
 ---
@@ -94,194 +103,6 @@ graph TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Active
-    Active --> ShutdownSignal : SIGTERM / SIGINT
-    ShutdownSignal --> StopAccepting : Закрытие слушающего сокета
-    StopAccepting --> WaitActiveConnections : Ожидание активных запросов
-    WaitActiveConnections --> Exit : Все соединения завершены или тайм-аут 30с
-    Exit --> [*]
-```
-
-Структурированное логирование позволяет наблюдать за состоянием через `docker compose logs`.
-
----
-
-## 🏁 Быстрый старт
-
-### 1. Подготовьте приватный ключ
-
-Сгенерируйте ключи, например, с помощью Python или вашей 1С‑компоненты. Вам нужен **приватный** ключ в Base64 URL‑safe без паддинга, длиной 32 байта.
-
-```bash
-# Пример ключа (НЕ ИСПОЛЬЗОВАТЬ В БОЮ)
-export ECIES_PRIVATE_KEY="Pz8_Pz8_Pz8_Pz8_Pz8_Pz8_Pz8_Pz8"
-```
-
-### 2. Запуск через Docker Compose
-
-Создайте файл `docker-compose.yml`:
-
-```yaml
-services:
-  proxy:
-    image: ghcr.io/your-username/ecies-proxy:latest
-    ports:
-      - "8080:8080"
-    environment:
-      - ECIES_PRIVATE_KEY=${ECIES_PRIVATE_KEY}
-      - UPSTREAM_URL=http://your-app:80
-      - LISTEN_ADDR=0.0.0.0:8080
-    restart: unless-stopped
-```
-
-Запустите:
-
-```bash
-docker compose up -d
-```
-
----
-
-## ⚙️ Конфигурация
-
-| Переменная окружения | По умолчанию | Описание |
-|----------------------|--------------|----------|
-| `ECIES_PRIVATE_KEY` | *обязательно* | Приватный ключ ECIES в кодировке URL‑safe Base64 (без `=`). |
-| `UPSTREAM_URL` | `http://localhost:8000` | Адрес вашего сервера, куда будут перенаправлены запросы. |
-| `LISTEN_ADDR` | `0.0.0.0:8080` | Порт, на котором прокси принимает соединения. |
-
----
-
-## 📮 Пример использования
-
-```bash
-# Зашифрованные данные (сгенерированы клиентом)
-curl -X POST http://localhost:8080/ \
-  -H "Content-Type: application/json" \
-  -d '{"message": "{{зашифрованный_base64_здесь}}"}'
-```
-
-Прокси найдёт `{{зашифрованный_base64_здесь}}`, расшифрует его и отправит на `UPSTREAM_URL`:
-
-```json
-{
-  "message": "секретные данные"
-}
-```
-
----
-
-## 📄 Лицензия
-
-Распространяется под лицензией **MIT**.
-
-
----
-
-## Презентационные материалы
-
-Ниже представлены слайды с диаграммами Mermaid и описанием. Код Mermaid можно вставить в [Mermaid Live Editor](https://mermaid.live/) или в любое markdown‑совместимое средство просмотра.
-
-### Слайд 1: Проблема и решение
-
-**Как передать секретные данные через публичный канал?**
-
-```mermaid
-graph LR
-    A[Клиент] -->|Публичная сеть| B{??}
-    B --> C[Ваш сервер]
-    
-    D[Клиент] -->|"TLS + ECIES в {{...}}"| E[ECIES Proxy]
-    E -->|Локальная сеть / Доверенный канал| F[Ваш сервер]
-    
-    style A fill:#f9f,stroke:#333
-    style D fill:#9f9,stroke:#333
-    style E fill:#ff9,stroke:#333
-    style F fill:#9f9,stroke:#333
-```
-
-### Слайд 2: Архитектура ECIES Proxy
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C as Клиент
-    box rgba(100,100,200,0.2) Докер контейнер
-    participant P as Прокси (Hyper + Tokio)
-    end
-    participant U as Upstream сервер
-
-    C->>P: HTTP запрос с {{зашифровано}}
-    activate P
-    Note over P: 1. Поиск всех {{...}}
-    Note over P: 2. Декодирование Base64
-    Note over P: 3. ECIES Расшифровка
-    Note over P: 4. Замена в теле запроса
-    P->>U: Проксированный запрос (открытые данные)
-    activate U
-    U-->>P: Ответ
-    deactivate U
-    P-->>C: Ответ клиенту
-    deactivate P
-    Note over P: Заголовок X-Decrypted-Count: 2
-```
-
-### Слайд 3: Детали алгоритма ECIES
-
-```mermaid
-graph TD
-    subgraph "Входные данные"
-    PKG["Зашифрованный пакет {{...}}"]
-    end
-
-    subgraph "ECIES Decryption"
-    PKG --> Decode[Base64 URL-safe Decode]
-    Decode --> EphPub[Эфемерный публичный ключ<br/>32 байта]
-    Decode --> Nonce[Nonce<br/>12 байт]
-    Decode --> Cipher[Шифротекст + тег Poly1305]
-    
-    Priv[Ваш приватный ключ] --> DH{X25519 ECDH}
-    EphPub --> DH
-    DH --> Shared[Общий секрет]
-    
-    Shared --> HKDF[<b>HKDF-SHA256</b><br/>info=ecies-chacha20]
-    HKDF --> SymKey[Симметричный ключ 32 байта]
-    
-    SymKey --> Decrypt{ChaCha20-Poly1305}
-    Nonce --> Decrypt
-    Cipher --> Decrypt
-    Decrypt -->|✅ Успех| Plain[Открытый текст]
-    Decrypt -->|❌ Ошибка| Err[Пакет не тронут]
-    end
-```
-
-### Слайд 4: Производительность и Многопоточность
-
-```mermaid
-graph TD
-    A[Слушающий сокет] -->|Accept| B(Tokio Task 1)
-    A -->|Accept| C(Tokio Task 2)
-    A -->|Accept| D(Tokio Task ...)
-    
-    subgraph "Tokio Thread Pool"
-    B --> E[Hyper Connection]
-    C --> F[Hyper Connection]
-    D --> G[Hyper Connection]
-    end
-    
-    E --> H[Расшифровка ECIES]
-    F --> I[Расшифровка ECIES]
-    G --> J[Расшифровка ECIES]
-    
-    H --> K[Запрос к Upstream]
-    I --> L[Запрос к Upstream]
-    J --> M[Запрос к Upstream]
-```
-
-### Слайд 5: Graceful Shutdown
-
-```mermaid
-stateDiagram-v2
     [*] --> Active : Запуск
     Active : Принимает соединения
     Active : Обрабатывает запросы
@@ -304,29 +125,132 @@ stateDiagram-v2
     CleanExit --> [*]
 ```
 
-### Слайд 6: Демонстрация
+Структурированное логирование позволяет наблюдать за состоянием через `docker compose logs`.
 
+---
+
+## 🏁 Быстрый старт
+
+### 1. Получите приватный ключ ECIES
+
+Для работы прокси необходим **приватный ключ**, соответствующий тому публичному ключу, которым шифруются данные.  
+Сгенерировать пару ключей можно несколькими способами:
+
+**С помощью Python (рекомендуется):**
 ```bash
-# 1. Запуск
-docker compose up -d
-
-# 2. Отправка зашифрованного запроса
-curl -X POST http://localhost:8080/data \
-  -H "Content-Type: application/json" \
-  -d '{"payload": "{{encrypted_string_here}}"}'
-
-# 3. Просмотр логов
-docker compose logs -f
-
-# 4. Остановка с Graceful Shutdown
-docker compose stop
+pip install cryptography
+python3 -c "
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+import base64
+private_key = X25519PrivateKey.generate()
+private_b64 = base64.urlsafe_b64encode(private_key.private_bytes_raw()).decode().rstrip('=')
+public_b64 = base64.urlsafe_b64encode(private_key.public_key().public_bytes_raw()).decode().rstrip('=')
+print('Приватный ключ (сохраните его):', private_b64)
+print('Публичный ключ (передайте клиентам):', public_b64)
+"
 ```
 
-### Слайд 7: Заключение
+**С помощью компоненты 1С (OpenIntegrations):**
+```1c
+ECIES = Новый("AddIn.OPI_ECIES.Main");
+КлючиJSON = ECIES.GenerateKeyPair();
+// Разберите JSON и используйте поле "private"
+```
 
-- **Безопасность**: Современные алгоритмы X25519 + ChaCha20.
-- **Простота**: Не требует изменений в вашем коде.
-- **Надёжность**: Асинхронный Rust, Graceful Shutdown, логирование.
-- **Открытый исходный код**: Лицензия MIT.
+Полученный приватный ключ нужно передать прокси через переменную окружения `ECIES_PRIVATE_KEY`.
 
-⭐ **Star us on GitHub!** ⭐
+### 2. Запустите прокси
+
+**Вариант A: Docker Run**
+```bash
+docker run -d \
+  --name ecies-proxy \
+  -p 8080:8080 \
+  -e ECIES_PRIVATE_KEY="ваш_приватный_ключ" \
+  -e UPSTREAM_URL="http://your-app:80" \
+  ghcr.io/grevinden/ecies-reverse-proxy/ecies-proxy:latest
+```
+
+**Вариант B: Docker Compose**
+
+Создайте файл `docker-compose.yml`:
+```yaml
+services:
+  proxy:
+    image: ghcr.io/grevinden/ecies-reverse-proxy/ecies-proxy:latest
+    ports:
+      - "8080:8080"
+    environment:
+      ECIES_PRIVATE_KEY: "ваш_приватный_ключ"
+      UPSTREAM_URL: "http://your-app:80"
+      LISTEN_ADDR: "0.0.0.0:8080"
+    restart: unless-stopped
+```
+
+Запустите:
+```bash
+docker compose up -d
+```
+
+---
+
+## ⚙️ Конфигурация
+
+| Переменная окружения | По умолчанию | Описание |
+|----------------------|--------------|----------|
+| `ECIES_PRIVATE_KEY` | *обязательно* | Приватный ключ ECIES в кодировке URL‑safe Base64 (без `=`). |
+| `UPSTREAM_URL` | `http://localhost:8000` | Адрес вашего сервера, куда будут перенаправлены запросы. |
+| `LISTEN_ADDR` | `0.0.0.0:8080` | Порт, на котором прокси принимает соединения. |
+
+---
+
+## 📮 Пример использования
+
+Предположим, ваш upstream‑сервер работает на `http://localhost:8000`.  
+Клиент отправляет запрос с зашифрованным сообщением:
+
+```bash
+curl -X POST http://localhost:8080/ \
+  -H "Content-Type: application/json" \
+  -d '{"message": "{{зашифрованный_base64_здесь}}"}'
+```
+
+Прокси найдёт `{{зашифрованный_base64_здесь}}`, расшифрует его и отправит на upstream:
+
+```json
+{
+  "message": "секретные данные"
+}
+```
+
+Ответ от upstream возвращается клиенту без изменений.
+
+---
+
+## 🧪 Проверка работоспособности
+
+1. **Генерация зашифрованного тестового пакета** (можно использовать тот же Python):
+   ```python
+   from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+   import base64
+   # загрузите публичный ключ получателя
+   receiver_public = base64.urlsafe_b64decode(public_b64 + '===')
+   # ... (используйте реализацию ECIES для шифрования)
+   ```
+
+2. **Отправка запроса** `curl` и наблюдение за логами:
+   ```bash
+   docker compose logs -f
+   ```
+
+3. **Остановка**:
+   ```bash
+   docker compose stop
+   ```
+   Прокси корректно завершит все активные соединения и выйдет.
+
+---
+
+## 📄 Лицензия
+
+Распространяется под лицензией **MIT**.
