@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/cache@v4
         with:
           path: |
@@ -62,13 +61,13 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.CR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push ecies-proxy
         uses: docker/build-push-action@v6
         with:
-          context: .                # корень репозитория, где лежит Dockerfile
-          file: ./Dockerfile        # путь к Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository }}/ecies-proxy:latest
           cache-from: type=gha
