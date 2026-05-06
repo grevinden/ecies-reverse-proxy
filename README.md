@@ -1,10 +1,5 @@
 # 🔐 ECIES Reverse Proxy
 
-[![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Public Image](https://img.shields.io/badge/ghcr-public-brightgreen)](https://github.com/grevinden/ecies-reverse-proxy/pkgs/container/ecies-proxy)
-
 Высокопроизводительный асинхронный прокси‑сервер для прозрачной расшифровки ECIES‑пакетов в HTTP‑трафике.  
 Позволяет развернуть end‑to‑end шифрование, не меняя исходный код ваших сервисов.  
 **Образ публично доступен в GitHub Container Registry.**
@@ -58,7 +53,7 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    PKG[Зашифрованный пакет в {{...}}]
+    PKG["Зашифрованный пакет в {{...}}"]
     Priv[Приватный ключ]
     
     PKG --> Decode
@@ -170,7 +165,7 @@ docker run -d \
   -p 8080:8080 \
   -e ECIES_PRIVATE_KEY="ваш_приватный_ключ" \
   -e UPSTREAM_URL="http://your-app:80" \
-  ghcr.io/grevinden/ecies-reverse-proxy/ecies-proxy:latest
+  ghcr.io/grevinden/ecies-reverse-proxy:latest
 ```
 
 **Вариант B: Docker Compose**
@@ -179,7 +174,7 @@ docker run -d \
 ```yaml
 services:
   proxy:
-    image: ghcr.io/grevinden/ecies-reverse-proxy/ecies-proxy:latest
+    image: ghcr.io/grevinden/ecies-reverse-proxy:latest
     ports:
       - "8080:8080"
     environment:

@@ -69,7 +69,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}/ecies-proxy:latest
+          tags: ghcr.io/${{ github.repository }}:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.description=ECIES decrypting reverse proxy
