@@ -6,7 +6,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Копирование бинарника с явным указанием прав на исполнение
-RUN install -m 755 target/release/ecies_proxy /usr/local/bin/ecies_proxy
+COPY --link --chmod=+x target/release/ecies_proxy /usr/local/bin/ecies_proxy
 
 # Устанавливаем рабочую директорию (опционально, но добавляет определённость)
 WORKDIR /usr/local/bin
