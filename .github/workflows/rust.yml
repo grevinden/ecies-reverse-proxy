@@ -70,8 +70,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository }}:latest
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.description=ECIES decrypting reverse proxy
           cache-from: type=gha
           cache-to: type=gha,mode=max
