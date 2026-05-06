@@ -8,17 +8,46 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/download-artifact@v8
-    - name: Build
-      run: cargo build --verbose --release
-    - name: Run tests
-      run: cargo test --verbose
+      - uses: actions/checkout@v4
+
+      # Кэширование зависимостей для ускорения сборок
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Сборка всего рабочего пространства (workspace) в release-режиме
+      - name: Build all workspace members
+        run: cargo build --workspace --release --verbose
+
+      # Запуск тестов всего workspace
+      - name: Run tests
+        run: cargo test --workspace --verbose
+
+  # Дополнительная задача: сборка Docker-образа для ecies-proxy (если нужно)
+  docker:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push ecies-proxy
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ecies-proxy
+          push: false  # заменить на true при настройке секретов реестра
+          tags: ghcr.io/${{ github.repository }}/ecies-proxy:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
