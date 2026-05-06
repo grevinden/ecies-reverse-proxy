@@ -9,6 +9,10 @@ opt-level = 3
 codegen-units = 1
 panic = "unwind"
 
+[[bin]]
+name = "ecies_proxy"
+path = "src/main.rs"
+
 [dependencies]
 base64 = "0.22.1"
 hyper = { version = "1.9.0", features = ["http1", "server", "client"] }
