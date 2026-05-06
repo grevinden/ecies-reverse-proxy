@@ -31,15 +31,27 @@ jobs:
       - name: Run tests
         run: cargo test --workspace --verbose
 
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecies-proxy-linux-amd64
+          path: target/release/ecies_proxy
+
   docker:
     needs: build
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write   # обязательно для публикации в GitHub Packages
+      packages: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ecies-proxy-linux-amd64
+          path: ./ecies-proxy/target/release/
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -49,13 +61,13 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.CR_PAT }}  # ваш сохранённый PAT
+          password: ${{ secrets.CR_PAT }}
 
       - name: Build and push ecies-proxy
         uses: docker/build-push-action@v6
         with:
           context: ./ecies-proxy
-          push: true  # теперь включаем push
+          push: true
           tags: ghcr.io/${{ github.repository }}/ecies-proxy:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
