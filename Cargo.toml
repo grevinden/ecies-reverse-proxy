@@ -1,0 +1,20 @@
+[package]
+name = "ecies-reverse-proxy"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+base64 = "0.22.1"
+hyper = { version = "1.9.0", features = ["http1", "server", "client"] }
+hyper-util = { version = "0.1.20", features = ["full"] }
+regex = "1.12.3"
+tokio = { version = "1.52.2", features = ["full"] }
+chacha20poly1305 = "0.11.0-rc.3"
+aead = "0.6.0-rc.10"
+hkdf = "0.13.0"
+sha2 = "0.11.0"
+x25519-dalek = { version = "3.0.0-pre.6", features = ["static_secrets"] }
+serde_json = "1.0.149"
+rand = "0.10.1"
+bytes = "1.11.1"
+http-body-util = "0.1.3"
