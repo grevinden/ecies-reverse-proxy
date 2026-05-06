@@ -3,9 +3,11 @@
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Public Image](https://img.shields.io/badge/ghcr-public-brightgreen)](https://github.com/grevinden/ecies-reverse-proxy/pkgs/container/ecies-proxy)
 
 Высокопроизводительный асинхронный прокси‑сервер для прозрачной расшифровки ECIES‑пакетов в HTTP‑трафике.  
-Позволяет развернуть end‑to‑end шифрование, не меняя исходный код ваших сервисов.
+Позволяет развернуть end‑to‑end шифрование, не меняя исходный код ваших сервисов.  
+**Образ публично доступен в GitHub Container Registry.**
 
 ---
 
@@ -56,7 +58,7 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    PKG["Зашифрованный пакет в {{...}}"]
+    PKG[Зашифрованный пакет в {{...}}]
     Priv[Приватный ключ]
     
     PKG --> Decode
@@ -89,6 +91,7 @@ graph TD
 - 🎯 **Точечная замена** – расшифровываются только данные в шаблоне `{{...}}`, остальной контент остаётся нетронутым.
 - 🛟 **Отказоустойчивость** – корректное завершение без потери запросов (Graceful Shutdown).
 - 📦 **Простое развёртывание** – готовый Docker‑образ, конфигурация через переменные окружения.
+- 🌐 **Публичный образ** – скачивание без авторизации, готов к использованию в любых средах.
 
 ---
 
@@ -151,7 +154,7 @@ print('Публичный ключ (передайте клиентам):', publ
 
 **С помощью компоненты 1С (OpenIntegrations):**
 ```1c
-ECIES = Новый("AddIn.OPI_ECIES.Main");
+ECIES = Новый("AddIn.OPIADDIN.ECIESEncryption");
 КлючиJSON = ECIES.GenerateKeyPair();
 // Разберите JSON и используйте поле "private"
 ```
@@ -190,6 +193,8 @@ services:
 ```bash
 docker compose up -d
 ```
+
+> **Примечание:** Образ публичный, поэтому `docker login` не требуется.
 
 ---
 
@@ -252,4 +257,4 @@ curl -X POST http://localhost:8080/ \
 
 ## 📄 Лицензия
 
-Распространяется под лицензией **MIT**.
+Распространяется под лицензией **MIT**. Полный текст доступен в файле [LICENSE](./LICENSE).
