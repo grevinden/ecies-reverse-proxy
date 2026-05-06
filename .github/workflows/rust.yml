@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   build:
@@ -16,6 +17,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v3.1.0
     - name: Build
       run: cargo build --verbose --release
     - name: Run tests
