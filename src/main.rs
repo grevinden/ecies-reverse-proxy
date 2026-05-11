@@ -88,6 +88,7 @@ async fn handle_request(
         .method(method)
         .uri(&upstream_url)
         .header("X-Decrypted-Count", decrypted_count.to_string())
+        .header("Content-Type", "application/json")
         .body(Full::from(Bytes::from(modified)))
     {
         Ok(req) => req,
@@ -157,7 +158,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listen_addr =
         env::var("LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string());
 
-    let base64_re = Regex::new(r"(?mu)[{]{2}([A-Za-z0-9_-]{44,})[}]{2}")?;
+    let base64_re = Regex::new(r"(?gs)[{]{2}([A-Za-z0-9_-]{44,})[}]{2}")?;
 
     let state = Arc::new(AppState {
         upstream,
